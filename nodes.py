@@ -4,6 +4,17 @@ import random
 import torch
 import hashlib
 
+from datetime import datetime
+import json
+import piexif
+import piexif.helper
+from PIL import Image, ExifTags
+from PIL.PngImagePlugin import PngInfo
+import numpy as np
+import folder_paths
+import comfy.sd
+from nodes import MAX_RESOLUTION
+
 import comfy.utils
 import comfy.model_management
 
@@ -58,7 +69,7 @@ class RandomPrompt:
             "prompts": [sorted(files), ], 
             "clip": ("CLIP", ),
             "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),}}
-    RETURN_TYPES = ("CONDITIONING","CONDITIONING","LATENT","WIDTH","HEIGHT","INT","STRING","STRING")
+    RETURN_TYPES = ("CONDITIONING","CONDITIONING","LATENT","WIDTH","HEIGHT","STRING","STRING")
     FUNCTION = "encode"
 
     CATEGORY = "conditioning"
@@ -95,7 +106,6 @@ class RandomPrompt:
                 {"samples":latent},
                 width * 2,
                 height * 2,
-                seed,
                 positive_prompt,
                 negative_prompt)
     
@@ -111,7 +121,7 @@ class RandomPromptMixed:
             "prompts": [sorted(files), ], 
             "clip": ("CLIP", ),
             "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),}}
-    RETURN_TYPES = ("CONDITIONING","CONDITIONING","LATENT","WIDTH","HEIGHT","INT","STRING","STRING")
+    RETURN_TYPES = ("CONDITIONING","CONDITIONING","LATENT","WIDTH","HEIGHT","STRING","STRING")
     FUNCTION = "encode"
 
     CATEGORY = "conditioning"
@@ -170,7 +180,6 @@ class RandomPromptMixed:
                 {"samples":latent},
                 width * 2,
                 height * 2,
-                seed,
                 positive_prompt,
                 negative_prompt)
     
@@ -266,7 +275,9 @@ class LoraLoaderExtended:
             lora = comfy.utils.load_torch_file(lora_path, safe_load=True)
             self.loaded_lora = (lora_path, lora)
 
-        model_lora, clip_lora = comfy.sd.load_lora_for_models(model,clip, lora, strength_model, strength_clip)
+        print(model)
+
+        model_lora, clip_lora = comfy.sd.load_lora_for_models(model, clip, lora, strength_model, strength_clip)
 
         target_len = lora_name.rfind('.')
         is_safetensors = str(lora_name).lower().find('.safetensors') >= 0
@@ -292,13 +303,174 @@ class LoraLoaderExtended:
             lora_hash_list += calculate_sha256(lora_path)
 
         return (model_lora, clip_lora, lora_list, lora_hash_list)
+    
+def handle_whitespace(string: str):
+    return string.strip().replace("\n", " ").replace("\r", " ").replace("\t", " ")
+
+
+def get_timestamp(time_format):
+    now = datetime.now()
+    try:
+        timestamp = now.strftime(time_format)
+    except:
+        timestamp = now.strftime("%Y-%m-%d-%H%M%S")
+
+    return timestamp
+
+
+def make_pathname(filename, seed, modelname, counter, time_format):
+    filename = filename.replace("%date", get_timestamp("%Y-%m-%d"))
+    filename = filename.replace("%time", get_timestamp(time_format))
+    filename = filename.replace("%model", modelname)
+    filename = filename.replace("%seed", str(seed))
+    filename = filename.replace("%counter", str(counter))
+    return filename
+
+
+def make_filename(filename, seed, modelname, counter, time_format):
+    filename = make_pathname(filename, seed, modelname, counter, time_format)
+
+    return get_timestamp(time_format) if filename == "" else filename
+
+def parse_name(ckpt_name):
+    path = ckpt_name
+    filename = path.split("/")[-1]
+    filename = filename.split(".")[:-1]
+    filename = ".".join(filename)
+    return filename
+
+class ImageSaveWithMetadata:
+    def __init__(self):
+        self.output_dir = folder_paths.output_directory
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "images": ("IMAGE", ),
+                "filename": ("STRING", {"default": f'%time_%seed', "multiline": False}),
+                "path": ("STRING", {"default": '', "multiline": False}),
+                "extension": (['png', 'jpeg', 'webp'],),
+                "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+                "ckpt_name": ("CKPT_NAME", {"default": '', "multiline": False}),
+                "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+                "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            },
+            "optional": {
+                "positive": ("STRING", {"default": 'unknown', "multiline": True}),
+                "negative": ("STRING", {"default": 'unknown', "multiline": True}),
+                "width": ("WIDTH", {"default": 512, "min": 1, "max": MAX_RESOLUTION, "step": 8}),
+                "height": ("HEIGHT", {"default": 512, "min": 1, "max": MAX_RESOLUTION, "step": 8}),
+                "lossless_webp": ("BOOLEAN", {"default": True}),
+                "quality_jpeg_or_webp": ("INT", {"default": 100, "min": 1, "max": 100}),
+                "counter": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff }),
+                "time_format": ("STRING", {"default": "%Y-%m-%d-%H%M%S", "multiline": False}),
+                "lora_list": ("STRING", {"default": '', "multiline": True}),
+                "lora_hash_list": ("STRING", {"default": '', "multiline": True})
+            },
+            "hidden": {
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO"
+            },
+        }
+
+    RETURN_TYPES = ()
+    FUNCTION = "save_files"
+
+    OUTPUT_NODE = True
+
+    CATEGORY = "ImageSaverTools"
+
+    def save_files(self, images, width, height, positive, negative, steps, cfg, sampler_name, scheduler, seed, ckpt_name, quality_jpeg_or_webp,
+                   lossless_webp, counter, filename, path, extension, time_format, lora_list, lora_hash_list, prompt=None, extra_pnginfo=None):
+        filename = make_filename(filename, seed, ckpt_name, counter, time_format,)
+        path = make_pathname(path, seed, ckpt_name, counter, time_format)
+        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+        basemodelname = parse_name(ckpt_name)
+        modelhash = calculate_sha256(ckpt_path)[:10]
+        positive = positive + ', ' + lora_list
+        sampler_name = str(sampler_name).replace('euler_ancestral', 'Euler a')
+        comment = f"{handle_whitespace(positive)}\nNegative prompt: {handle_whitespace(negative)}\nSteps: \
+{steps}, Sampler: {sampler_name}{f'_{scheduler}' if scheduler != 'normal' else ''}, CFG Scale: {cfg}, \
+Seed: {seed}, Size: {width}x{height}, Model hash: {modelhash}, Model: {basemodelname}, \
+Lora hashes: \"{lora_hash_list}\", Version: ComfyUI"
+        output_path = os.path.join(self.output_dir, path)
+
+        if output_path.strip() != '':
+            if not os.path.exists(output_path.strip()):
+                print(f'The path `{output_path.strip()}` specified doesn\'t exist! Creating directory.')
+                os.makedirs(output_path, exist_ok=True)    
+
+        filenames = self.save_images(images, output_path, filename, comment, extension, quality_jpeg_or_webp, lossless_webp, prompt, extra_pnginfo)
+
+        subfolder = os.path.normpath(path)
+        return {"ui": {"images": map(lambda filename: {"filename": filename, "subfolder": subfolder if subfolder != '.' else '', "type": 'output'}, filenames)}}
+
+    def save_images(self, images, output_path, filename_prefix, comment, extension, quality_jpeg_or_webp, lossless_webp, prompt=None, extra_pnginfo=None) -> list[str]:
+        img_count = 1
+        paths = list()
+        for image in images:
+            i = 255. * image.cpu().numpy()
+            img = Image.fromarray(np.clip(i, 0, 255).astype(np.uint8))
+            if images.size()[0] > 1:
+                filename_prefix += "_{:02d}".format(img_count)
+
+            if extension == 'png':
+                metadata = PngInfo()
+                metadata.add_text("parameters", comment)
+
+                if prompt is not None:
+                    metadata.add_text("prompt", json.dumps(prompt))
+                if extra_pnginfo is not None:
+                    for x in extra_pnginfo:
+                        metadata.add_text(x, json.dumps(extra_pnginfo[x]))
+
+                filename = f"{filename_prefix}.png"
+                img.save(os.path.join(output_path, filename), pnginfo=metadata, optimize=True)
+            else:
+                filename = f"{filename_prefix}.{extension}"
+                file = os.path.join(output_path, filename)
+                img.save(file, optimize=True, quality=quality_jpeg_or_webp, lossless=lossless_webp)
+                exif_bytes = piexif.dump({
+                    "Exif": {
+                        piexif.ExifIFD.UserComment: piexif.helper.UserComment.dump(comment, encoding="unicode")
+                    },
+                })
+                piexif.insert(exif_bytes, file)
+
+            paths.append(filename)
+            img_count += 1
+        return paths
+    
+class CheckpointLoaderSimpleExtended:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": { "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
+                             }}
+    RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CKPT_NAME")
+    FUNCTION = "load_checkpoint"
+
+    CATEGORY = "loaders"
+
+    def load_checkpoint(self, ckpt_name):
+        ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
+        out = comfy.sd.load_checkpoint_guess_config(ckpt_path,
+                                                    output_vae=True,
+                                                    output_clip=True,
+                                                    embedding_directory=folder_paths.get_folder_paths("embeddings"))[:3]
+        
+        return (out[0], out[1], out[2], ckpt_name)
 
 NODE_CLASS_MAPPINGS = {
     "RandomPrompt": RandomPrompt,
     "RandomPromptMixed": RandomPromptMixed,
     "ImageScaleTo": ImageScaleTo,
     "EmptyLatentImageScaleBy": EmptyLatentImageScaleBy,
-    "LoraLoaderExtended": LoraLoaderExtended
+    "LoraLoaderExtended": LoraLoaderExtended,
+    "Save Image w/Metadata": ImageSaveWithMetadata,
+    "CheckpointLoaderSimpleExtended": CheckpointLoaderSimpleExtended
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -307,4 +479,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageScaleTo": "ImageScaleTo",
     "EmptyLatentImageScaleBy": "EmptyLatentImageScaleBy",
     "LoraLoaderExtended": "LoraLoaderExtended",
+    "Save Image w/Metadata": "Save Image w/Metadata",
+    "CheckpointLoaderSimpleExtended": "CheckpointLoaderSimpleExtended"
 }
