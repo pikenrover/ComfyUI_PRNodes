@@ -1,6 +1,6 @@
 {
   "last_node_id": 111,
-  "last_link_id": 410,
+  "last_link_id": 412,
   "nodes": [
     {
       "id": 45,
@@ -389,7 +389,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 21,
+      "order": 25,
       "mode": 4,
       "inputs": [
         {
@@ -424,7 +424,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 22,
+      "order": 26,
       "mode": 4,
       "inputs": [
         {
@@ -457,7 +457,7 @@
         "1": 26
       },
       "flags": {},
-      "order": 23,
+      "order": 27,
       "mode": 4,
       "inputs": [
         {
@@ -488,7 +488,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 24,
+      "order": 28,
       "mode": 4,
       "inputs": [
         {
@@ -530,14 +530,14 @@
       "flags": {
         "collapsed": true
       },
-      "order": 25,
+      "order": 29,
       "mode": 4,
       "inputs": [
         {
           "name": "STRING",
           "type": "*",
           "link": 394,
-          "color_on": ""
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -565,14 +565,14 @@
       "flags": {
         "collapsed": true
       },
-      "order": 26,
+      "order": 30,
       "mode": 4,
       "inputs": [
         {
           "name": "STRING",
           "type": "*",
-          "link": 395,
-          "color_on": ""
+          "link": 412,
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -600,14 +600,14 @@
       "flags": {
         "collapsed": true
       },
-      "order": 19,
+      "order": 23,
       "mode": 4,
       "inputs": [
         {
           "name": "STRING",
           "type": "*",
           "link": 387,
-          "color_on": ""
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -721,7 +721,7 @@
         "1": 54
       },
       "flags": {},
-      "order": 27,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
@@ -768,7 +768,7 @@
         "1": 54
       },
       "flags": {},
-      "order": 29,
+      "order": 17,
       "mode": 0,
       "inputs": [
         {
@@ -852,14 +852,14 @@
       "flags": {
         "collapsed": true
       },
-      "order": 28,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
           "name": "STRING",
           "type": "*",
           "link": 356,
-          "color_on": ""
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -887,14 +887,14 @@
       "flags": {
         "collapsed": true
       },
-      "order": 30,
+      "order": 18,
       "mode": 0,
       "inputs": [
         {
           "name": "STRING",
           "type": "*",
           "link": 357,
-          "color_on": ""
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -922,14 +922,14 @@
       "flags": {
         "collapsed": true
       },
-      "order": 20,
+      "order": 24,
       "mode": 4,
       "inputs": [
         {
           "name": "STRING",
           "type": "*",
-          "link": 388,
-          "color_on": ""
+          "link": 411,
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -957,7 +957,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 15,
+      "order": 19,
       "mode": 4,
       "inputs": [
         {
@@ -992,7 +992,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 16,
+      "order": 20,
       "mode": 4,
       "inputs": [
         {
@@ -1027,7 +1027,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 18,
+      "order": 22,
       "mode": 4,
       "inputs": [
         {
@@ -1069,7 +1069,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 17,
+      "order": 21,
       "mode": 4,
       "inputs": [
         {
@@ -1107,7 +1107,7 @@
           "name": "STRING",
           "type": "*",
           "link": 350,
-          "color_on": ""
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -1142,7 +1142,7 @@
           "name": "STRING",
           "type": "*",
           "link": 349,
-          "color_on": ""
+          "color_on": "#7CBB1A"
         }
       ],
       "properties": {
@@ -1858,6 +1858,101 @@
       ]
     },
     {
+      "id": 97,
+      "type": "ttN text",
+      "pos": [
+        -181,
+        1312
+      ],
+      "size": {
+        "0": 397.10986328125,
+        "1": 142.51231384277344
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            354,
+            356
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ttN text",
+        "ttNnodeVersion": "1.0.0"
+      },
+      "widgets_values": [
+        "score_9, score_8_up, score_7_up, score_6_up, gundamwingcockpit, demon, neon horns, gray skin, futuristic, scifi, (plugsuit:1.3), blue armor, dark lips, large breasts, solo, dark hair, long hair, gloves, g0thicPXL, dutch angle, controls, joystick, technology, glowing, neon, holographic display, blue eyes, stretching, sitting, close up"
+      ]
+    },
+    {
+      "id": 98,
+      "type": "ttN text",
+      "pos": [
+        -182,
+        1499
+      ],
+      "size": {
+        "0": 396.4688720703125,
+        "1": 159.05030822753906
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": [
+            355,
+            357
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ttN text",
+        "ttNnodeVersion": "1.0.0"
+      },
+      "widgets_values": [
+        "score_6, score_5, score_4, worst quality, low quality, text, censored, deformed, bad hand, blurry, (watermark), extra hands,  hoops, hoop earrings, jewelry, 3d, eyebrow piercing, blush, blushing, shaved head,  earrings,  nipple rings, tail, panties, pantylines, holding object, zipper, desk, cleavage, child, loli"
+      ]
+    },
+    {
+      "id": 21,
+      "type": "PreviewImage",
+      "pos": [
+        1206,
+        414
+      ],
+      "size": {
+        "0": 900.1307983398438,
+        "1": 718.4855346679688
+      },
+      "flags": {
+        "collapsed": false
+      },
+      "order": 32,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 60
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      }
+    },
+    {
       "id": 103,
       "type": "RandomPromptMixed",
       "pos": [
@@ -1869,7 +1964,7 @@
         "1": 246
       },
       "flags": {},
-      "order": 6,
+      "order": 8,
       "mode": 4,
       "inputs": [
         {
@@ -1924,16 +2019,18 @@
           "name": "STRING",
           "type": "STRING",
           "links": [
-            387,
-            388
+            387
           ],
           "shape": 3
         },
         {
           "name": "STRING",
           "type": "STRING",
-          "links": null,
-          "shape": 3
+          "links": [
+            411
+          ],
+          "shape": 3,
+          "slot_index": 6
         }
       ],
       "properties": {
@@ -1957,7 +2054,7 @@
         "1": 246
       },
       "flags": {},
-      "order": 7,
+      "order": 9,
       "mode": 4,
       "inputs": [
         {
@@ -2012,16 +2109,18 @@
           "name": "STRING",
           "type": "STRING",
           "links": [
-            394,
-            395
+            394
           ],
           "shape": 3
         },
         {
           "name": "STRING",
           "type": "STRING",
-          "links": null,
-          "shape": 3
+          "links": [
+            412
+          ],
+          "shape": 3,
+          "slot_index": 6
         }
       ],
       "properties": {
@@ -2032,101 +2131,6 @@
         455531424274590,
         "randomize"
       ]
-    },
-    {
-      "id": 97,
-      "type": "ttN text",
-      "pos": [
-        -181,
-        1312
-      ],
-      "size": {
-        "0": 397.10986328125,
-        "1": 142.51231384277344
-      },
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "text",
-          "type": "STRING",
-          "links": [
-            354,
-            356
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ttN text",
-        "ttNnodeVersion": "1.0.0"
-      },
-      "widgets_values": [
-        "score_9, score_8_up, score_7_up, score_6_up, gundamwingcockpit, demon, neon horns, gray skin, futuristic, scifi, (plugsuit:1.3), blue armor, dark lips, large breasts, solo, dark hair, long hair, gloves, g0thicPXL, dutch angle, controls, joystick, technology, glowing, neon, holographic display, blue eyes, stretching, sitting, close up"
-      ]
-    },
-    {
-      "id": 98,
-      "type": "ttN text",
-      "pos": [
-        -182,
-        1499
-      ],
-      "size": {
-        "0": 396.4688720703125,
-        "1": 159.05030822753906
-      },
-      "flags": {},
-      "order": 9,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "text",
-          "type": "STRING",
-          "links": [
-            355,
-            357
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ttN text",
-        "ttNnodeVersion": "1.0.0"
-      },
-      "widgets_values": [
-        "score_6, score_5, score_4, worst quality, low quality, text, censored, deformed, bad hand, blurry, (watermark), extra hands,  hoops, hoop earrings, jewelry, 3d, eyebrow piercing, blush, blushing, shaved head,  earrings,  nipple rings, tail, panties, pantylines, holding object, zipper, desk, cleavage, child, loli"
-      ]
-    },
-    {
-      "id": 21,
-      "type": "PreviewImage",
-      "pos": [
-        1206,
-        414
-      ],
-      "size": {
-        "0": 900.1307983398438,
-        "1": 718.4855346679688
-      },
-      "flags": {
-        "collapsed": false
-      },
-      "order": 32,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 60
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "PreviewImage"
-      }
     }
   ],
   "links": [
@@ -4035,14 +4039,6 @@
       "STRING"
     ],
     [
-      388,
-      103,
-      5,
-      87,
-      0,
-      "STRING"
-    ],
-    [
       389,
       104,
       0,
@@ -4079,14 +4075,6 @@
       104,
       5,
       83,
-      0,
-      "STRING"
-    ],
-    [
-      395,
-      104,
-      5,
-      84,
       0,
       "STRING"
     ],
@@ -4145,6 +4133,22 @@
       111,
       0,
       "IMAGE"
+    ],
+    [
+      411,
+      103,
+      6,
+      87,
+      0,
+      "STRING"
+    ],
+    [
+      412,
+      104,
+      6,
+      84,
+      0,
+      "STRING"
     ]
   ],
   "groups": [
@@ -4218,10 +4222,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7513148009015781,
+      "scale": 0.9090909090909091,
       "offset": {
-        "0": 182.22424407531787,
-        "1": -1291.68590515934
+        "0": 673.9451608159771,
+        "1": -1061.381074205171
       }
     }
   },
