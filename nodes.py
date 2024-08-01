@@ -8,7 +8,7 @@ from datetime import datetime
 import json
 import piexif
 import piexif.helper
-from PIL import Image, ExifTags
+from PIL import Image, ImageOps, ImageSequence, ExifTags, ImageFile, UnidentifiedImageError
 from PIL.PngImagePlugin import PngInfo
 import numpy as np
 import folder_paths
@@ -31,23 +31,34 @@ RESOLUTIONS = [
 
 MAX_RESOLUTION=16384
 
-def addnet_hash_safetensors(b):
+addnet_hash_cache = {}
+def addnet_hash_safetensors(file_path):
+    if file_path in addnet_hash_cache:
+        return addnet_hash_cache[file_path]
+
     """kohya-ss hash for safetensors from https://github.com/kohya-ss/sd-scripts/blob/main/library/train_util.py"""
-    hash_sha256 = hashlib.sha256()
-    blksize = 1024 * 1024
+    with open(file_path, "rb") as b:
+        hash_sha256 = hashlib.sha256()
+        blksize = 1024 * 1024
 
-    b.seek(0)
-    header = b.read(8)
-    n = int.from_bytes(header, "little")
+        b.seek(0)
+        header = b.read(8)
+        n = int.from_bytes(header, "little")
 
-    offset = n + 8
-    b.seek(offset)
-    for chunk in iter(lambda: b.read(blksize), b""):
-        hash_sha256.update(chunk)
+        offset = n + 8
+        b.seek(offset)
+        for chunk in iter(lambda: b.read(blksize), b""):
+            hash_sha256.update(chunk)
 
-    return str(hash_sha256.hexdigest())[0:12].lower()
+        hash = str(hash_sha256.hexdigest())[0:12].lower()
+        addnet_hash_cache[file_path] = hash
+        return hash
 
+sha256_hash_cache = {}
 def calculate_sha256(file_path):
+    if file_path in sha256_hash_cache:
+        return sha256_hash_cache[file_path]
+
     sha256_hash = hashlib.sha256()
 
     with open(file_path, "rb") as f:
@@ -55,7 +66,8 @@ def calculate_sha256(file_path):
         for byte_block in iter(lambda: f.read(4096), b""):
             sha256_hash.update(byte_block)
 
-    return str(sha256_hash.hexdigest())[0:12].lower()
+    hash = str(sha256_hash.hexdigest())[0:12].lower()
+    return hash
 
 class RandomPrompt:
     def __init__(self):
@@ -86,8 +98,8 @@ class RandomPrompt:
         random.seed(seed)
         random_prompt = random.choice(prompt_list)
         random_prompt_split = random_prompt.split(DELIMITER)
-        positive_prompt = random_prompt_split[0]
-        negative_prompt = random_prompt_split[1] + ', child, loli, underage'
+        positive_prompt = random_prompt_split[0] + ', embedding:safe_pos'
+        negative_prompt = random_prompt_split[1] + ', child, loli, underage, embedding:SimpleNegativeV3, embedding:safe_neg,'
 
         positive_tokens = clip.tokenize(positive_prompt)
         positive_cond, positive_pooled = clip.encode_from_tokens(positive_tokens, return_pooled=True)
@@ -150,7 +162,7 @@ class RandomPromptMixed:
         random.seed(seed)
         random_prompt = random.choice(prompt_list)
         random_prompt_split = random_prompt.split(DELIMITER)
-        negative_prompt = random_prompt_split[1] + ', child, loli, underage'
+        negative_prompt = random_prompt_split[1] + ', child, loli, underage, embedding:SimpleNegativeV3, embedding:safe_neg'
 
         random_length = random.choice(prompt_lengths)
         index = 0
@@ -158,7 +170,7 @@ class RandomPromptMixed:
         while index < random_length:
             prompt.append(random.choice(bag_of_words))
             index += 1
-        positive_prompt = ','.join(prompt)
+        positive_prompt = ','.join(prompt) + ', embedding:safe_pos'
 
         print(positive_prompt)
         print(negative_prompt)
@@ -297,8 +309,7 @@ class LoraLoaderExtended:
         lora_hash_list += lora_name_no_ext
         lora_hash_list += ': '
         if is_safetensors:
-            with open(lora_path, "rb") as file:
-                lora_hash_list += addnet_hash_safetensors(file)
+            lora_hash_list += addnet_hash_safetensors(lora_path)
         else:
             lora_hash_list += calculate_sha256(lora_path)
 
@@ -354,6 +365,7 @@ class ImageSaveWithMetadata:
                 "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                 "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
                 "ckpt_name": ("CKPT_NAME", {"default": '', "multiline": False}),
+                "ckpt_hash": ("CKPT_HASH", {"default": '', "multiline": False}),
                 "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
                 "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
@@ -383,13 +395,13 @@ class ImageSaveWithMetadata:
 
     CATEGORY = "ImageSaverTools"
 
-    def save_files(self, images, width, height, positive, negative, steps, cfg, sampler_name, scheduler, seed, ckpt_name, quality_jpeg_or_webp,
+    def save_files(self, images, width, height, positive, negative, steps, cfg, sampler_name, scheduler, seed, ckpt_name, ckpt_hash, quality_jpeg_or_webp,
                    lossless_webp, counter, filename, path, extension, time_format, lora_list, lora_hash_list, prompt=None, extra_pnginfo=None):
         filename = make_filename(filename, seed, ckpt_name, counter, time_format,)
         path = make_pathname(path, seed, ckpt_name, counter, time_format)
         ckpt_path = folder_paths.get_full_path("checkpoints", ckpt_name)
         basemodelname = parse_name(ckpt_name)
-        modelhash = calculate_sha256(ckpt_path)[:10]
+        modelhash = ckpt_hash
         positive = positive + ', ' + lora_list
         sampler_name = str(sampler_name).replace('euler_ancestral', 'Euler a')
         comment = f"{handle_whitespace(positive)}\nNegative prompt: {handle_whitespace(negative)}\nSteps: \
@@ -449,7 +461,7 @@ class CheckpointLoaderSimpleExtended:
     def INPUT_TYPES(s):
         return {"required": { "ckpt_name": (folder_paths.get_filename_list("checkpoints"), ),
                              }}
-    RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CKPT_NAME")
+    RETURN_TYPES = ("MODEL", "CLIP", "VAE", "CKPT_NAME", "CKPT_HASH")
     FUNCTION = "load_checkpoint"
 
     CATEGORY = "loaders"
@@ -460,8 +472,136 @@ class CheckpointLoaderSimpleExtended:
                                                     output_vae=True,
                                                     output_clip=True,
                                                     embedding_directory=folder_paths.get_folder_paths("embeddings"))[:3]
+
+        print('hashing model...')
+        ckpt_hash = calculate_sha256(ckpt_path)[:10]
+        print('done')
         
-        return (out[0], out[1], out[2], ckpt_name)
+        return (out[0], out[1], out[2], ckpt_name, ckpt_hash)
+
+def pillow(fn, arg):
+    prev_value = None
+    try:
+        x = fn(arg)
+    except (OSError, UnidentifiedImageError, ValueError): #PIL issues #4472 and #2445, also fixes ComfyUI issue #3416
+        prev_value = ImageFile.LOAD_TRUNCATED_IMAGES
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
+        x = fn(arg)
+    finally:
+        if prev_value is not None:
+            ImageFile.LOAD_TRUNCATED_IMAGES = prev_value
+        return x
+    
+def strip_path(path):
+    #This leaves whitespace inside quotes and only a single "
+    #thus ' ""test"' -> '"test'
+    #consider path.strip(string.whitespace+"\"")
+    #or weightier re.fullmatch("[\\s\"]*(.+?)[\\s\"]*", path).group(1)
+    path = path.strip()
+    if path.startswith("\""):
+        path = path[1:]
+    if path.endswith("\""):
+        path = path[:-1]
+    return path
+    
+def get_sorted_dir_files_from_directory(directory: str, skip_first_images: int=0, select_every_nth: int=1, extensions=None):
+    directory = strip_path(directory)
+    dir_files = os.listdir(directory)
+    dir_files = sorted(dir_files)
+    dir_files = [os.path.join(directory, x) for x in dir_files]
+    dir_files = list(filter(lambda filepath: os.path.isfile(filepath), dir_files))
+    # filter by extension, if needed
+    if extensions is not None:
+        extensions = list(extensions)
+        new_dir_files = []
+        for filepath in dir_files:
+            ext = "." + filepath.split(".")[-1]
+            if ext.lower() in extensions:
+                new_dir_files.append(filepath)
+        dir_files = new_dir_files
+    # start at skip_first_images
+    dir_files = dir_files[skip_first_images:]
+    dir_files = dir_files[0::select_every_nth]
+    return dir_files
+    
+class LoadRandomImage:
+    @classmethod
+    def INPUT_TYPES(s):
+        input_dir = folder_paths.get_input_directory()
+        directories = []
+        for item in os.listdir(input_dir):
+            if not os.path.isfile(os.path.join(input_dir, item)) and item != "clipspace":
+                directories.append(item)
+        return {"required": { 
+            "directory": (directories,),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            }
+        }
+
+    CATEGORY = "image"
+
+    RETURN_TYPES = ("IMAGE", "MASK")
+    FUNCTION = "load_image"
+    def load_image(self, directory, seed):
+        input_dir = folder_paths.get_input_directory() + "\\" + directory
+        images = get_sorted_dir_files_from_directory(input_dir)
+        random.seed(seed)
+        image_path = random.choice(images)
+        
+        img = pillow(Image.open, image_path)
+        
+        output_images = []
+        output_masks = []
+        w, h = None, None
+
+        excluded_formats = ['MPO']
+        
+        for i in ImageSequence.Iterator(img):
+            i = pillow(ImageOps.exif_transpose, i)
+
+            if i.mode == 'I':
+                i = i.point(lambda i: i * (1 / 255))
+            image = i.convert("RGB")
+
+            if len(output_images) == 0:
+                w = image.size[0]
+                h = image.size[1]
+            
+            if image.size[0] != w or image.size[1] != h:
+                continue
+            
+            image = np.array(image).astype(np.float32) / 255.0
+            image = torch.from_numpy(image)[None,]
+            if 'A' in i.getbands():
+                mask = np.array(i.getchannel('A')).astype(np.float32) / 255.0
+                mask = 1. - torch.from_numpy(mask)
+            else:
+                mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
+            output_images.append(image)
+            output_masks.append(mask.unsqueeze(0))
+
+        if len(output_images) > 1 and img.format not in excluded_formats:
+            output_image = torch.cat(output_images, dim=0)
+            output_mask = torch.cat(output_masks, dim=0)
+        else:
+            output_image = output_images[0]
+            output_mask = output_masks[0]
+
+        return (output_image, output_mask)
+
+    @classmethod
+    def IS_CHANGED(s, directory: str, **kwargs):
+        if directory is None:
+            return ""
+        
+        return directory
+
+    @classmethod
+    def VALIDATE_INPUTS(s, directory: str):
+        if not folder_paths.exists_annotated_filepath(directory):
+            return "Invalid folder: {}".format(directory)
+
+        return True
 
 NODE_CLASS_MAPPINGS = {
     "RandomPrompt": RandomPrompt,
@@ -470,7 +610,8 @@ NODE_CLASS_MAPPINGS = {
     "EmptyLatentImageScaleBy": EmptyLatentImageScaleBy,
     "LoraLoaderExtended": LoraLoaderExtended,
     "Save Image w/Metadata": ImageSaveWithMetadata,
-    "CheckpointLoaderSimpleExtended": CheckpointLoaderSimpleExtended
+    "CheckpointLoaderSimpleExtended": CheckpointLoaderSimpleExtended,
+    "LoadRandomImage": LoadRandomImage
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -480,5 +621,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "EmptyLatentImageScaleBy": "EmptyLatentImageScaleBy",
     "LoraLoaderExtended": "LoraLoaderExtended",
     "Save Image w/Metadata": "Save Image w/Metadata",
-    "CheckpointLoaderSimpleExtended": "CheckpointLoaderSimpleExtended"
+    "CheckpointLoaderSimpleExtended": "CheckpointLoaderSimpleExtended",
+    "LoadRandomImage": "LoadRandomImage"
 }
