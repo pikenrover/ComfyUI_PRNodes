@@ -9,6 +9,6 @@ Repository = "https://github.com/pikenrover/ComfyUI_PRNodes"
 #  Used by Comfy Registry https://comfyregistry.org
 
 [tool.comfy]
-PublisherId = ""
+PublisherId = "pikenrover"
 DisplayName = "ComfyUI_PRNodes"
 Icon = ""
